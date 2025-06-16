@@ -1,59 +1,3 @@
-<?php
-// Cargar variables desde keys.env manualmente
-if (file_exists(__DIR__ . '/keys.env')) {
-    $lines = file(__DIR__ . '/keys.env', FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
-    foreach ($lines as $line) {
-        if (strpos(trim($line), '#') === 0) continue; // ignorar comentarios
-        putenv(trim($line));
-    }
-}
-
-// Leer variables de entorno
-$host = getenv('DB_HOST') ?: 'localhost';
-$db   = getenv('DB_NAME') ?: 'inventario';
-$user = getenv('DB_USER') ?: 'postgres';
-$pass = getenv('DB_PASS') ?: '';
-$port = getenv('DB_PORT') ?: 5432;
-
-// Crear conexión PDO
-$dsn = "pgsql:host=$host;port=$port;dbname=$db;";
-try {
-    $pdo = new PDO($dsn, $user, $pass, [
-        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-    ]);
-} catch (PDOException $e) {
-    die("Error de conexión: " . $e->getMessage());
-}
-
-// === ACCIONES CRUD ===
-$accion = $_GET['accion'] ?? '';
-
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    if ($accion === 'guardar') {
-        $stmt = $pdo->prepare("INSERT INTO productos (nombre, precio, cantidad, proveedor) VALUES (?, ?, ?, ?)");
-        $stmt->execute([$_POST['nombre'], $_POST['precio'], $_POST['cantidad'], $_POST['proveedor']]);
-    } elseif ($accion === 'actualizar') {
-        $stmt = $pdo->prepare("UPDATE productos SET nombre=?, precio=?, cantidad=?, proveedor=? WHERE id=?");
-        $stmt->execute([$_POST['nombre'], $_POST['precio'], $_POST['cantidad'], $_POST['proveedor'], $_POST['id']]);
-    }
-    header("Location: inventario.php");
-    exit;
-}
-
-if ($accion === 'eliminar' && isset($_GET['id'])) {
-    $stmt = $pdo->prepare("DELETE FROM productos WHERE id=?");
-    $stmt->execute([$_GET['id']]);
-    header("Location: inventario.php");
-    exit;
-}
-
-// Obtener lista de productos
-$stmt = $pdo->query("SELECT * FROM productos ORDER BY id DESC");
-$productos = $stmt->fetchAll();
-
-?>
-
 <!DOCTYPE html>
 <html lang="es">
 
@@ -146,30 +90,17 @@ $productos = $stmt->fetchAll();
 
     <h1>Inventario Tech United</h1>
 
-    <?php
-// Para editar, carga el producto a editar
-if ($accion === 'editar' && isset($_GET['id'])) {
-    $id = $_GET['id'];
-    $stmt = $pdo->prepare("SELECT * FROM productos WHERE id=?");
-    $stmt->execute([$id]);
-    $producto = $stmt->fetch();
-} else {
-    $producto = ['id'=>'', 'nombre'=>'', 'precio'=>'', 'cantidad'=>'', 'proveedor'=>''];
-}
-?>
-
-    <form method="post" action="inventario.php?accion=<?php echo $producto['id'] ? 'actualizar' : 'guardar'; ?>">
-        <input type="hidden" name="id" value="<?php echo htmlspecialchars($producto['id']); ?>" />
+    <form>
+        <input type="hidden" name="id" value="" />
         <label>Nombre del Producto</label>
-        <input type="text" name="nombre" required value="<?php echo htmlspecialchars($producto['nombre']); ?>" />
+        <input type="text" name="nombre" placeholder="Ingrese nombre" />
         <label>Precio</label>
-        <input type="number" step="0.01" name="precio" required
-            value="<?php echo htmlspecialchars($producto['precio']); ?>" />
+        <input type="number" step="0.01" name="precio" placeholder="0.00" />
         <label>Cantidad</label>
-        <input type="number" name="cantidad" required value="<?php echo htmlspecialchars($producto['cantidad']); ?>" />
+        <input type="number" name="cantidad" placeholder="0" />
         <label>Proveedor</label>
-        <input type="text" name="proveedor" required value="<?php echo htmlspecialchars($producto['proveedor']); ?>" />
-        <button type="submit"><?php echo $producto['id'] ? 'Actualizar' : 'Guardar'; ?></button>
+        <input type="text" name="proveedor" placeholder="Nombre proveedor" />
+        <button type="button" disabled>Guardar (simulado)</button>
     </form>
 
     <table>
@@ -184,20 +115,39 @@ if ($accion === 'editar' && isset($_GET['id'])) {
             </tr>
         </thead>
         <tbody>
-            <?php foreach ($productos as $p): ?>
             <tr>
-                <td><?php echo $p['id']; ?></td>
-                <td><?php echo htmlspecialchars($p['nombre']); ?></td>
-                <td><?php echo number_format($p['precio'], 2); ?></td>
-                <td><?php echo $p['cantidad']; ?></td>
-                <td><?php echo htmlspecialchars($p['proveedor']); ?></td>
+                <td>1</td>
+                <td>Teclado Mecánico</td>
+                <td>950.00</td>
+                <td>15</td>
+                <td>TechPro</td>
                 <td class="acciones">
-                    <a href="inventario.php?accion=editar&id=<?php echo $p['id']; ?>">Editar</a>
-                    <a href="inventario.php?accion=eliminar&id=<?php echo $p['id']; ?>"
-                        onclick="return confirm('¿Seguro que quieres eliminar este producto?');">Eliminar</a>
+                    <a href="#">Editar</a>
+                    <a href="#" onclick="return confirm('¿Seguro que quieres eliminar este producto?');">Eliminar</a>
                 </td>
             </tr>
-            <?php endforeach; ?>
+            <tr>
+                <td>2</td>
+                <td>Monitor 24"</td>
+                <td>3200.50</td>
+                <td>8</td>
+                <td>ViewTech</td>
+                <td class="acciones">
+                    <a href="#">Editar</a>
+                    <a href="#" onclick="return confirm('¿Seguro que quieres eliminar este producto?');">Eliminar</a>
+                </td>
+            </tr>
+            <tr>
+                <td>3</td>
+                <td>Mouse Inalámbrico</td>
+                <td>450.00</td>
+                <td>30</td>
+                <td>MouseMaster</td>
+                <td class="acciones">
+                    <a href="#">Editar</a>
+                    <a href="#" onclick="return confirm('¿Seguro que quieres eliminar este producto?');">Eliminar</a>
+                </td>
+            </tr>
         </tbody>
     </table>
 
